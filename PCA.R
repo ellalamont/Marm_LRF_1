@@ -1,71 +1,211 @@
 # PCA
 # E. Lamont
-# 5/27/26
+# 6/29/26
 
 source("Import_data.R")
 
 # Plot basics
 my_plot_themes <- theme_bw() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-  theme(legend.position = "right",legend.text=element_text(size=14),
+  theme(legend.position = "right",legend.text=element_text(size=12),
         # legend.title = element_text(size = 14),
-        legend.title = element_blank(),
-        plot.title = element_text(size=10), 
-        axis.title.x = element_text(size=14), 
-        axis.text.x = element_text(angle = 0, size=14, vjust=0, hjust=0.5),
-        axis.title.y = element_text(size=14),
-        axis.text.y = element_text(size=14), 
+        legend.title = element_text(size=14),
+        plot.title = element_text(size=12), 
+        axis.title.x = element_text(size=12), 
+        axis.text.x = element_text(angle = 0, size=12, vjust=0, hjust=0.5),
+        axis.title.y = element_text(size=12),
+        axis.text.y = element_text(size=12), 
         plot.subtitle = element_text(size=9))
 
+Run_colors <- c(`Marm_1` = "#49006A", 
+                   `Marm_2` = "#AE017E", 
+                   `Marm_3`= "#F768A1")
+
+CavityScore_colors <- c("H37Rv" = "#999999",
+                        "Normal" = "#A8D5BA",
+                        "0: necrotic"  = "#FEE5D9",
+                        "0: fibrotic" = "#FC9272", 
+                        "1" = "#F4A6A6",
+                        "2" = "#EF6C6C",
+                        "3" = "#C62828",
+                        "5" = "#8E1B1B")
+
+Binary_colors <- c(`H37Rv` = "#999999", 
+                   `1` = "#D55E00", 
+                   `0`= "#0072B2")
+
+Days_colors <- c(
+  "H37Rv"     = "#999999",
+  "untreated" = "#E7298A",
+  "92"  = "#A6CEE3",
+  "136" = "#1F78B4",
+  "156" = "#08306B",
+  "130" = "#B2DF8A",
+  "87"  = "#33A02C",
+  "168" = "#006D2C",
+  "66"  = "#FDBF6F",
+  "73"  = "#FF7F00",
+  "48"  = "#E31A1C",
+  "72"  = "#FB9A99",
+  "84"  = "#6A3D9A")
+
+Tissue_colors <- c(
+  "H37Rv"   = "#999999",
+  "RUL"     = "#1D91C0", 
+  "RML"     = "#41B6C4",
+  "RLL"     = "#0C2C84",
+  "LUL"     = "#ADDD8E",  
+  "LML"     = "#41AB5D",
+  "LLL"     = "#005A32",
+  "Liver"   = "darkred",
+  "ACC (?)" = "#FDBF6F")
+
 ###########################################################
-##################### PCA RUN 1 VSTB ######################
+#################### ALL SAMPLES VSTB #####################
 
 # Convert gene column to rownames
-my_data <- GoodSamples60_VSTB 
+tmp_data <- All_VSTB 
 
 # Transform the data
-my_data_t <- as.data.frame(t(my_data)) # or my_tpm2
+tmp_data_t <- as.data.frame(t(tmp_data)) # or my_tpm2
 
 # Make the actual PCA
-my_PCA <- prcomp(my_data_t, scale = F) # Scale is F here because the data is already normalized
+tmp_PCA <- prcomp(tmp_data_t, scale = F) # Scale is F here because the data is already normalized
 
 # See the % Variance explained
-summary(my_PCA)
-summary_PCA <- format(round(as.data.frame(summary(my_PCA)[["importance"]]['Proportion of Variance',]) * 100, digits = 1), nsmall = 1) # format and round used to control the digits after the decimal place
-summary_PCA[1,1] # PC1 explains 12.1% of variance
-summary_PCA[2,1] # PC2 explains 8.9% of variance
-summary_PCA[3,1] # PC3 explains 7.2% of variance
+summary(tmp_PCA)
+tmp_summary_PCA <- format(round(as.data.frame(summary(tmp_PCA)[["importance"]]['Proportion of Variance',]) * 100, digits = 1), nsmall = 1) # format and round used to control the digits after the decimal place
+tmp_summary_PCA[1,1] # PC1 explains 13.7% of variance
+tmp_summary_PCA[2,1] # PC2 explains 6.4% of variance
+tmp_summary_PCA[3,1] # PC3 explains 4.7% of variance
 
 # MAKE PCA PLOT with GGPLOT 
-my_PCA_df <- as.data.frame(my_PCA$x[, 1:3]) # Extract the first 3 PCs
-my_PCA_df <- data.frame(SampleID = row.names(my_PCA_df), my_PCA_df)
-# my_PCA_df <- merge(my_PCA_df, GoodSamples60_pipeSummary, by = "SampleID2")
+tmp_PCA_df <- as.data.frame(tmp_PCA$x[, 1:3]) # Extract the first 3 PCs
+tmp_PCA_df <- data.frame(SampleID2 = row.names(tmp_PCA_df), tmp_PCA_df)
+tmp_PCA_df <- merge(tmp_PCA_df, All_pipeSummary, by = "SampleID2")
 
-PCA_fig <- my_PCA_df %>% 
-  ggplot(aes(x = PC1, y = PC2)) + 
-  geom_point(size = 5, alpha = 0.8, stroke = 0.8) +
-  # geom_text_repel(aes(label = SampleID), size = 2.5) + 
-  # scale_fill_manual(values = my_fav_colors) +  
+
+PCA_fig1 <- tmp_PCA_df %>% 
+  ggplot(aes(x = PC1, y = PC2, fill = Tissue.Location)) + 
+  geom_point(size = 4, alpha = 0.8, stroke = 0.8, shape = 21) +
+  geom_text_repel(aes(label = Sample_Number), size = 2.5) + 
+  scale_fill_manual(values = Tissue_colors) +  
   # scale_shape_manual(values = my_fav_shapes) + 
-  geom_text_repel(aes(label = SampleID), size= 2, box.padding = 0.4, segment.color = "black", max.overlaps = Inf) + 
-  labs(title = "Marm_1 VST Blinded",
-       subtitle = "GoodSamples60_RawReadsf2 -> DESeq2 VST blinded",
+  # geom_text_repel(aes(label = comma(N_Genomic)), size= 2, box.padding = 0.4, segment.color = "grey42", max.overlaps = Inf) + 
+  labs(title = "Marm Runs1-3 VSTB",
+       subtitle = "All samples, Sample Number labels",
        x = paste0("PC1: ", summary_PCA[1,1], "%"),
        y = paste0("PC2: ", summary_PCA[2,1], "%")) +
   my_plot_themes
-PCA_fig
+PCA_fig1
+ggsave(PCA_fig1,
+       file = paste0("All_VSTB_Tissue.Location_v1.png"),
+       path = "Figures/PCA",
+       dpi = 600,
+       width = 9, height = 6, units = "in")
 
-# PCA_fig <- my_PCA_df %>% 
-#   ggplot(aes(x = PC1, y = PC2, fill = Type2, shape = Type2)) + 
-#   geom_point(aes(fill = Type2, shape = Type2), size = 5, alpha = 0.8, stroke = 0.8) +
-#   # geom_text_repel(aes(label = Lineage), size = 2.5) + 
-#   scale_fill_manual(values = my_fav_colors) +  
-#   scale_shape_manual(values = my_fav_shapes) + 
-#   # geom_text_repel(aes(label = Patient), size= 2, box.padding = 0.4, segment.color = "black", max.overlaps = Inf) + 
-#   labs(title = "GoodSputum60 (Run1-4) VST Blinded",
-#        subtitle = "RawReadf -> DESeq2 VST blinded",
-#        x = paste0("PC1: ", summary_PCA[1,1], "%"),
-#        y = paste0("PC2: ", summary_PCA[2,1], "%")) +
-#   my_plot_themes
-# PCA_fig
+PCA_fig2 <- tmp_PCA_df %>% 
+  ggplot(aes(x = PC2, y = PC3, fill = Tissue.Location)) + 
+  geom_point(size = 4, alpha = 0.8, stroke = 0.8, shape = 21) +
+  geom_text_repel(aes(label = Sample_Number), size = 2.5) + 
+  scale_fill_manual(values = Tissue_colors) +  
+  # scale_shape_manual(values = my_fav_shapes) + 
+  # geom_text_repel(aes(label = comma(N_Genomic)), size= 2, box.padding = 0.4, segment.color = "grey42", max.overlaps = Inf) + 
+  labs(title = "Marm Runs1-3 VSTB",
+       subtitle = "All samples, Sample Number labels",
+       x = paste0("PC2: ", summary_PCA[2,1], "%"),
+       y = paste0("PC3: ", summary_PCA[3,1], "%")) +
+  my_plot_themes
+PCA_fig2
+ggsave(PCA_fig2,
+       file = paste0("All_VSTB_Tissue.Location_v2.png"),
+       path = "Figures/PCA",
+       dpi = 600,
+       width = 9, height = 6, units = "in")
+
+# Batch effect when seeing PC2 vs PC3?
+
+
+# 3D plot
+# https://plotly.com/r/pca-visualization/
+PCA_3D <- plot_ly(my_PCA_df, x = ~PC1, y = ~PC2, z = ~PC3,
+                  type = "scatter3d", mode = "markers",
+                  color = ~Run,
+                  colors = my_run_colors)
+PCA_3D
+
+
+# ###################################################### #
+################## GOODSAMPLES60 VSTB ####################
+
+# Convert gene column to rownames
+tmp_data <- GoodSamples60_VSTB 
+
+# Transform the data
+tmp_data_t <- as.data.frame(t(tmp_data)) # or my_tpm2
+
+# Make the actual PCA
+tmp_PCA <- prcomp(tmp_data_t, scale = F) # Scale is F here because the data is already normalized
+
+# See the % Variance explained
+summary(tmp_PCA)
+tmp_summary_PCA <- format(round(as.data.frame(summary(tmp_PCA)[["importance"]]['Proportion of Variance',]) * 100, digits = 1), nsmall = 1) # format and round used to control the digits after the decimal place
+tmp_summary_PCA[1,1] # PC1 explains 18.9% of variance
+tmp_summary_PCA[2,1] # PC2 explains 6.3% of variance
+tmp_summary_PCA[3,1] # PC3 explains 3.9% of variance
+
+# MAKE PCA PLOT with GGPLOT 
+tmp_PCA_df <- as.data.frame(tmp_PCA$x[, 1:3]) # Extract the first 3 PCs
+tmp_PCA_df <- data.frame(SampleID2 = row.names(tmp_PCA_df), tmp_PCA_df)
+tmp_PCA_df <- merge(tmp_PCA_df, GoodSamples60_pipeSummary, by = "SampleID2")
+
+
+PCA_fig1 <- tmp_PCA_df %>% 
+  ggplot(aes(x = PC1, y = PC2, fill = Run)) + 
+  geom_point(size = 4, alpha = 0.8, stroke = 0.8, shape = 21) +
+  geom_text_repel(aes(label = Sample_Number), size = 2.5) + 
+  scale_fill_manual(values = Run_colors) +  
+  # scale_shape_manual(values = my_fav_shapes) + 
+  # geom_text_repel(aes(label = comma(N_Genomic)), size= 2, box.padding = 0.4, segment.color = "grey42", max.overlaps = Inf) + 
+  labs(title = "Marm Runs1-3 VSTB",
+       subtitle = "GoodSamples60_VSTB, Sample Number labels",
+       x = paste0("PC1: ", summary_PCA[1,1], "%"),
+       y = paste0("PC2: ", summary_PCA[2,1], "%")) +
+  my_plot_themes
+PCA_fig1
+ggsave(PCA_fig1,
+       file = paste0("GoodSamples60_VSTB_Run_v1.png"),
+       path = "Figures/PCA",
+       dpi = 600,
+       width = 9, height = 6, units = "in")
+
+PCA_fig2 <- tmp_PCA_df %>% 
+  ggplot(aes(x = PC2, y = PC3, fill = Run)) + 
+  geom_point(size = 4, alpha = 0.8, stroke = 0.8, shape = 21) +
+  geom_text_repel(aes(label = Sample_Number), size = 2.5) + 
+  scale_fill_manual(values = Run_colors) +  
+  # scale_shape_manual(values = my_fav_shapes) + 
+  # geom_text_repel(aes(label = comma(N_Genomic)), size= 2, box.padding = 0.4, segment.color = "grey42", max.overlaps = Inf) + 
+  labs(title = "Marm Runs1-3 VSTB",
+       subtitle = "All samples, Sample Number labels",
+       x = paste0("PC2: ", summary_PCA[2,1], "%"),
+       y = paste0("PC3: ", summary_PCA[3,1], "%")) +
+  my_plot_themes
+PCA_fig2
+ggsave(PCA_fig2,
+       file = paste0("GoodSamples60_VSTB_Run_v2.png"),
+       path = "Figures/PCA",
+       dpi = 600,
+       width = 9, height = 6, units = "in")
+
+# Batch effect when seeing PC2 vs PC3?
+
+
+# 3D plot
+# https://plotly.com/r/pca-visualization/
+PCA_3D <- plot_ly(my_PCA_df, x = ~PC1, y = ~PC2, z = ~PC3,
+                  type = "scatter3d", mode = "markers",
+                  color = ~Run,
+                  colors = my_run_colors)
+PCA_3D
 

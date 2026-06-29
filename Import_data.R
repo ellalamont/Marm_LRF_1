@@ -1,9 +1,9 @@
 # Import Data
-# 5/27/26
+# 6/29/26
 # E. Lamont
 
-################################################
-################ LOAD PACKAGES #################
+# ####################################################### #
+##################### LOAD PACKAGES #######################
 
 library(ggplot2)
 library(tidyverse)
@@ -26,6 +26,7 @@ library(edgeR) # for cpm
 library(sva) # For ComBat_seq batch correction
 library(stringr)
 library(readxl) # To import excel files as dataframes
+library(scales) # For comma()
 
 # DuffyTools
 # library(devtools)
@@ -43,84 +44,155 @@ library(readxl) # To import excel files as dataframes
 # options(scipen = 999) 
 # options(scipen = 0) # To revert back to default
 
-###########################################################
+# ####################################################### #
 ############### IMPORT PIPELINE SUMMARY DATA ##############
 
 # Marm_1_LRF
-Marm_1_LRF_pipeSummary <- read.csv("Data/Marm_1_LRF/Pipeline.Summary.Details.csv") %>% 
+Marm_1_pipeSummary <- read.csv("Data/Marm_1_LRF/Pipeline.Summary.Details.csv") %>% 
   select(-X) %>%
-  mutate(Run = "Marm_1_LRF")
+  mutate(Run = "Marm_1")
+
+# Marm_2_LRF
+Marm_2_pipeSummary <- read.csv("Data/Marm_2_LRF/Pipeline.Summary.Details.csv") %>% 
+  select(-X) %>%
+  mutate(Run = "Marm_2")
+
+# Marm_3_LRF
+Marm_3_pipeSummary <- read.csv("Data/Marm_3_LRF/Pipeline.Summary.Details.csv") %>% 
+  select(-X) %>%
+  mutate(Run = "Marm_3")
+
+# Merge the pipeSummaries
+All_pipeSummary <- merge(Marm_1_pipeSummary, Marm_2_pipeSummary, all = T)
+All_pipeSummary <- merge(All_pipeSummary, Marm_3_pipeSummary, all = T)
 
 
 # Make a second SampleID column
 # Remove _S* From names
-Marm_1_LRF_pipeSummary$SampleID2 <- gsub(x = Marm_1_LRF_pipeSummary$SampleID, pattern = "_S.*", replacement = "")
+All_pipeSummary$SampleID2 <- gsub(x = All_pipeSummary$SampleID, pattern = "_S.*", replacement = "")
+
+# Add run numbers to the H37Rvs
+All_pipeSummary <- All_pipeSummary %>%
+  mutate(SampleID2 = if_else(SampleID2 %in% c("H37Rv_1", "H37Rv_2", "H37Rv_3") 
+                             & str_detect(Run, "^Marm_[123]$"), 
+                             paste0(SampleID2, "_Run", str_extract(Run, "[123]")),
+                             SampleID2)) 
+
+# Remove the undetermined
+All_pipeSummary <- All_pipeSummary %>%
+  filter(SampleID != "Undetermined_S0")
+
+# ####################################################### #
+################## IMPORT SAMPLE METADATA #################
+
+# I edited this in excel to make it better for import
+All_metadata <- read.csv("Data/Sample_Metadata/Marm_seq_meta.csv")
+
+All_pipeSummary <- All_pipeSummary %>%
+  left_join(All_metadata, by = join_by(Run, SampleID2))
 
 
-###########################################################
+# ####################################################### #
 ############### IMPORT AND PROCESS RAW READS ##############
 
 Run1_RawReads <- read.csv("Data/Marm_1_LRF/Mtb.Expression.Gene.Data.readsM.csv")
 Run1_RawReads <- Run1_RawReads %>% 
-  dplyr::select(-Undetermined_S0)
+  dplyr::select(-Undetermined_S0) %>%
+  dplyr::rename_with(function(x) gsub("(_S[0-9]+)$", "_Run1\\1", x), 
+                     .cols = matches("^H37Rv_[123]_S[0-9]+$"))
+
+Run2_RawReads <- read.csv("Data/Marm_2_LRF/Mtb.Expression.Gene.Data.readsM.csv")
+Run2_RawReads <- Run2_RawReads %>% 
+  dplyr::select(-Undetermined_S0) %>%
+  dplyr::rename_with(function(x) gsub("(_S[0-9]+)$", "_Run2\\1", x), 
+                     .cols = matches("^H37Rv_[123]_S[0-9]+$"))
+
+Run3_RawReads <- read.csv("Data/Marm_3_LRF/Mtb.Expression.Gene.Data.readsM.csv")
+Run3_RawReads <- Run3_RawReads %>% 
+  dplyr::select(-Undetermined_S0) %>%
+  dplyr::rename_with(function(x) gsub("(_S[0-9]+)$", "_Run3\\1", x), 
+                     .cols = matches("^H37Rv_[123]_S[0-9]+$"))
+
+# Merge the RawReads
+All_RawReads <- merge(Run1_RawReads, Run2_RawReads, all = T)
+All_RawReads <- merge(All_RawReads, Run3_RawReads)
+
 
 # Remove the _S at the end
-names(Run1_RawReads) = gsub(pattern = "_S[0-9]+$", replacement = "", x = names(Run1_RawReads))
+names(All_RawReads) = gsub(pattern = "_S[0-9]+$", replacement = "", x = names(All_RawReads))
 
 # Keep only the protein coding Rv genes
-Run1_RawReads_f <- Run1_RawReads %>%
+All_RawReads_f <- All_RawReads %>%
   filter(grepl("^Rv[0-9]+[A-Za-z]?$", X))
 
+All_RawReads_f <- All_RawReads_f %>%
+  column_to_rownames("X")
 
-###########################################################
+# ####################################################### #
 ######## CALCULATE TXN COVERAGE FROM Rv GENES ONLY ########
 
 # Count, for each column (sample), how many genes have >= 10 reads
-NumGoodReads <- colSums(Run1_RawReads_f >= 10)
+NumGoodReads <- colSums(All_RawReads_f >= 10)
 
 # Add as new column in All_pipeSummary, matching by SampleID2
-Marm_1_LRF_pipeSummary$AtLeast.10.Reads_f <- NumGoodReads[Marm_1_LRF_pipeSummary$SampleID2]
+All_pipeSummary$AtLeast.10.Reads_f <- NumGoodReads[All_pipeSummary$SampleID2]
 
 # Add transcriptional coverage
-Marm_1_LRF_pipeSummary <- Marm_1_LRF_pipeSummary %>% mutate(Txn_Coverage_f = round(AtLeast.10.Reads_f/4030*100))
+All_pipeSummary <- All_pipeSummary %>% mutate(Txn_Coverage_f = round(AtLeast.10.Reads_f/4030*100))
 
-
-###########################################################
-################### FILTER GOODSAMPLES60 ##################
-
-GoodSamples60_pipeSummary <- Marm_1_LRF_pipeSummary %>%
-  filter(Txn_Coverage_f >= 60)
-
-GoodSampleList60 <- GoodSamples60_pipeSummary %>%  
-  pull(SampleID2) # 29 samples
-
-GoodSamples60_RawReadsf <- Run1_RawReads_f %>% 
-  dplyr::select(X, all_of(GoodSampleList60)) %>% 
-  column_to_rownames(var = "X")
-
-###########################################################
+# ####################################################### #
 #################### VSTB NORMALIZATION ###################
-# Blinded VST (VSTB) for PCA. Also I don't have the metadata
-
-
-# Keep genes with >5 counts in at least 50% of samples 
-# Not doing this because it threw a parametric error when VST normalizing
-# keep <- rowSums(Run1_RawReads_f > 5) >= 0.5 * ncol(Run1_RawReads_f)
-# Run1_RawReadsf2 <- Run1_RawReads_f[keep, ] # now only 3707 genes (instead of 4030)
+# Blinded VST (VSTB) for PCA. 
 
 # Keep Genes with at least 10 reads total across all samples
-keep <- rowSums(GoodSamples60_RawReadsf) >= 10
-GoodSamples60_RawReadsf2 <- GoodSamples60_RawReadsf[keep,] # Now only 4025 genes
+keep <- rowSums(All_RawReads_f) >= 10
+All_RawReads_f2 <- All_RawReads_f[keep,] # Now only 4025 genes
 
 # Generate a matrix of integers
-GoodSamples60_RawReadsf2_int <- GoodSamples60_RawReadsf2 %>%
+All_RawReads_f2_int <- All_RawReads_f2 %>%
   mutate(across(everything(), round)) %>% 
   as.matrix()
 
 # Normalize without metadata (Blinded)
-GoodSamples60_VSTB <- varianceStabilizingTransformation(GoodSamples60_RawReadsf2_int, fitType = "parametric")
-GoodSamples60_VSTB <- as.data.frame(GoodSamples60_VSTB)
+All_VSTB <- varianceStabilizingTransformation(All_RawReads_f2_int, fitType = "parametric")
+All_VSTB <- as.data.frame(All_VSTB)
 
 
+# ####################################################### #
+################### FILTER GOODSAMPLES60 ##################
+
+GoodSamples60_pipeSummary <- All_pipeSummary %>%
+  filter(Txn_Coverage_f >= 60) %>%
+  filter(N_Genomic >= 700000)
+
+GoodSampleList60 <- GoodSamples60_pipeSummary %>%  
+  pull(SampleID2) # 71 samples
+
+GoodSamples60_RawReadsf <- All_RawReads_f %>% 
+  dplyr::select(all_of(GoodSampleList60))
+
+GoodSamples60_VSTB <- All_VSTB %>% 
+  dplyr::select(all_of(GoodSampleList60))
+
+
+# ####################################################### #
+################### CLEAN UP ENVIRONMENT ##################
+
+# rm(list = ls(pattern = "^tmp"))
+
+# Remove original pipeSummaries
+rm(Marm_1_pipeSummary, Marm_2_pipeSummary, Marm_3_pipeSummary)
+
+# Remove original raw reads
+rm(Run1_RawReads, Run2_RawReads, Run3_RawReads)
+
+# Remove VST intermediates
+rm(All_RawReads_f2, All_RawReads_f2_int, keep)
+
+# remove batch correction intermediates
+# rm(combat_counts, count_matrix, meta, batch, condition)
+
+# Remove random other things
+rm(NumGoodReads)
 
 

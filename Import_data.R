@@ -91,6 +91,10 @@ All_metadata <- read.csv("Data/Sample_Metadata/Marm_seq_meta.csv")
 All_pipeSummary <- All_pipeSummary %>%
   left_join(All_metadata, by = join_by(Run, SampleID2))
 
+# Add column with JM vs LRF samples
+All_pipeSummary <- All_pipeSummary %>% 
+  mutate(Handler = if_else(str_detect(SampleID2, "JM"), "JM", "LRF"))
+
 
 # ####################################################### #
 ############### IMPORT AND PROCESS RAW READS ##############

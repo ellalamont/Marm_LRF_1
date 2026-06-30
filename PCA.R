@@ -60,6 +60,8 @@ Tissue_colors <- c(
   "Liver"   = "darkred",
   "ACC (?)" = "#FDBF6F")
 
+Binary_colors2 <- c("#D55E00", "#0072B2")
+
 ###########################################################
 #################### ALL SAMPLES VSTB #####################
 
@@ -86,10 +88,10 @@ tmp_PCA_df <- merge(tmp_PCA_df, All_pipeSummary, by = "SampleID2")
 
 
 PCA_fig1 <- tmp_PCA_df %>% 
-  ggplot(aes(x = PC1, y = PC2, fill = Tissue.Location)) + 
+  ggplot(aes(x = PC1, y = PC2, fill = Run)) + 
   geom_point(size = 4, alpha = 0.8, stroke = 0.8, shape = 21) +
-  geom_text_repel(aes(label = Sample_Number), size = 2.5) + 
-  scale_fill_manual(values = Tissue_colors) +  
+  geom_text_repel(aes(label = SampleID2), size = 2.5) + 
+  scale_fill_manual(values = Run_colors) +  
   # scale_shape_manual(values = my_fav_shapes) + 
   # geom_text_repel(aes(label = comma(N_Genomic)), size= 2, box.padding = 0.4, segment.color = "grey42", max.overlaps = Inf) + 
   labs(title = "Marm Runs1-3 VSTB",
@@ -98,17 +100,17 @@ PCA_fig1 <- tmp_PCA_df %>%
        y = paste0("PC2: ", summary_PCA[2,1], "%")) +
   my_plot_themes
 PCA_fig1
-ggsave(PCA_fig1,
-       file = paste0("All_VSTB_Tissue.Location_v1.png"),
-       path = "Figures/PCA",
-       dpi = 600,
-       width = 9, height = 6, units = "in")
+# ggsave(PCA_fig1,
+#        file = paste0("All_VSTB_Tissue.Location_v1.png"),
+#        path = "Figures/PCA",
+#        dpi = 600,
+#        width = 9, height = 6, units = "in")
 
 PCA_fig2 <- tmp_PCA_df %>% 
-  ggplot(aes(x = PC2, y = PC3, fill = Tissue.Location)) + 
+  ggplot(aes(x = PC2, y = PC3, fill = Handler)) + 
   geom_point(size = 4, alpha = 0.8, stroke = 0.8, shape = 21) +
-  geom_text_repel(aes(label = Sample_Number), size = 2.5) + 
-  scale_fill_manual(values = Tissue_colors) +  
+  # geom_text_repel(aes(label = Sample_Number), size = 2.5) + 
+  scale_fill_manual(values = Binary_colors2) +  
   # scale_shape_manual(values = my_fav_shapes) + 
   # geom_text_repel(aes(label = comma(N_Genomic)), size= 2, box.padding = 0.4, segment.color = "grey42", max.overlaps = Inf) + 
   labs(title = "Marm Runs1-3 VSTB",
@@ -117,11 +119,11 @@ PCA_fig2 <- tmp_PCA_df %>%
        y = paste0("PC3: ", summary_PCA[3,1], "%")) +
   my_plot_themes
 PCA_fig2
-ggsave(PCA_fig2,
-       file = paste0("All_VSTB_Tissue.Location_v2.png"),
-       path = "Figures/PCA",
-       dpi = 600,
-       width = 9, height = 6, units = "in")
+# ggsave(PCA_fig2,
+#        file = paste0("All_VSTB_Tissue.Location_v2.png"),
+#        path = "Figures/PCA",
+#        dpi = 600,
+#        width = 9, height = 6, units = "in")
 
 # Batch effect when seeing PC2 vs PC3?
 

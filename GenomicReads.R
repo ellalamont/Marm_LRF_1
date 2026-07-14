@@ -25,7 +25,9 @@ my_plot_themes <- theme_bw() +
 
 Run_colors <- c(`Marm_1` = "#49006A", 
                 `Marm_2` = "#AE017E", 
-                `Marm_3`= "#F768A1")
+                `Marm_3`= "#F768A1",
+                `Marm_4` = "#FA9FB5",
+                `PredictTB_Run6` = "#FCC5C0")
 
 CavityScore_colors <- c("H37Rv" = "#999999",
                         "Normal" = "#A8D5BA",
@@ -45,20 +47,24 @@ CavityScore_colors <- c("H37Rv" = "#999999",
 
 
 fig1 <- All_pipeSummary %>% 
-  ggplot(aes(x = N_Genomic, y = Txn_Coverage_f, fill = Cavity_score)) + 
-  geom_point(size = 4, alpha = 0.8, stroke = 0.8, shape = 21) +
-  geom_text_repel(aes(label = SampleID2), size = 2.5) + 
-  scale_fill_manual(values = CavityScore_colors) +  
+  ggplot(aes(x = N_Genomic, y = Txn_Coverage_f, fill = Run)) + 
+  geom_point(size = 3.5, alpha = 0.8, stroke = 0.8, shape = 21) +
+  geom_text_repel(aes(label = SampleID2), size = 2) + 
+  scale_fill_manual(values = Run_colors) +  
   scale_x_continuous(trans='log10') +
   geom_hline(yintercept = 60, linetype = "dashed", alpha = 0.5) + 
   geom_vline(xintercept = 700000, linetype = "dashed", alpha = 0.5) + 
-  labs(title = "Marm Runs1-3",
+  labs(title = "Marm Runs1-4",
        subtitle = "All samples",
        x = paste0("# reads aligning to Mtb"),
        y = paste0("% transcriptional coverage")) +
   my_plot_themes
 fig1
-
+ggsave(fig1,
+       file = paste0("AllSamples_v1.pdf"),
+       path = "Figures/GenomicReads",
+       # dpi = 600,
+       width = 10, height = 6, units = "in")
 
 
 

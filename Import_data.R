@@ -117,8 +117,10 @@ All_pipeSummary <- All_pipeSummary %>%
 ############# ADD MORE COLUMNS TO PIPE SUMMARY ############
 
 All_pipeSummary <- All_pipeSummary %>% 
-  mutate(Type = if_else(str_detect(SampleID2, "Marm"), "Marmoset", "H37Rv"))
+  mutate(Type = if_else(str_detect(SampleID2, "Marm"), "Marmoset", "H37Rv")) 
 
+All_pipeSummary <- All_pipeSummary %>%
+  mutate(across(where(is.character), ~ if_else(str_detect(SampleID2, "Rv_Log") & is.na(.x), "H37Rv", .x)))
 
 # ####################################################### #
 ############### IMPORT AND PROCESS RAW READS ##############

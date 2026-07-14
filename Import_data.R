@@ -122,6 +122,9 @@ All_pipeSummary <- All_pipeSummary %>%
 All_pipeSummary <- All_pipeSummary %>%
   mutate(across(where(is.character), ~ if_else(str_detect(SampleID2, "Rv_Log") & is.na(.x), "H37Rv", .x)))
 
+
+
+
 # ####################################################### #
 ############### IMPORT AND PROCESS RAW READS ##############
 
@@ -279,13 +282,26 @@ GoodSamples60_RawReadsf <- All_RawReads_f %>%
 GoodSamples60_VSTB <- All_VSTB %>% 
   dplyr::select(all_of(GoodSampleList60))
 
+# ####################################################### #
+#################### REMOVE DUPLICATES ####################
+# Removing duplicates that would make it above the threshold (leaving in the lower ones because they are filtered out later)
+
+GoodSamples60_pipeSummary <- GoodSamples60_pipeSummary %>%
+  filter(!SampleID2 %in% c("Marm_LRF_2_re", "Marm_LRF_25_re", "Marm_LRF_42", "Marm_LRF_56_re"))
+
 
 ###########################################################
 ##################### SUMMARY NUMBERS #####################
 
-All_pipeSummary %>%
+GoodSamples60_pipeSummary %>%
   filter(N_Genomic >= 700000) %>%
   filter(Txn_Coverage_f >=60) %>%
+  group_by(Type, Cavity_score) %>%
+  summarize(N_samples = n())
+
+All_pipeSummary %>%
+  filter(N_Genomic < 700000 | Txn_Coverage_f <60) %>%
+  # filter(Txn_Coverage_f < 60) %>%
   group_by(Type, Cavity_score) %>%
   summarize(N_samples = n())
 

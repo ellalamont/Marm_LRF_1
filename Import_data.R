@@ -62,9 +62,22 @@ Marm_3_pipeSummary <- read.csv("Data/Marm_3_LRF/Pipeline.Summary.Details.csv") %
   select(-X) %>%
   mutate(Run = "Marm_3")
 
+# Marm_4_LRF
+Marm_4_pipeSummary <- read.csv("Data/Marm_4_LRF/Pipeline.Summary.Details.csv") %>% 
+  select(-X) %>%
+  mutate(Run = "Marm_4")
+
+# Ella's H37Rv_Log samples
+H37Rv_pipeSummary <- read.csv("Data/PredictTB_Run6/Pipeline.Summary.Details.csv") %>% 
+  select(-Outcome, -Arm, -Patient, -X, -Week) %>% 
+  filter(Type2 == "H37Rv Log") %>%
+  mutate(Run = "PredictTB_Run6")
+
 # Merge the pipeSummaries
 All_pipeSummary <- merge(Marm_1_pipeSummary, Marm_2_pipeSummary, all = T)
 All_pipeSummary <- merge(All_pipeSummary, Marm_3_pipeSummary, all = T)
+All_pipeSummary <- merge(All_pipeSummary, Marm_4_pipeSummary, all = T)
+All_pipeSummary <- merge(All_pipeSummary, H37Rv_pipeSummary, all = T)
 
 
 # Make a second SampleID column
@@ -74,8 +87,8 @@ All_pipeSummary$SampleID2 <- gsub(x = All_pipeSummary$SampleID, pattern = "_S.*"
 # Add run numbers to the H37Rvs
 All_pipeSummary <- All_pipeSummary %>%
   mutate(SampleID2 = if_else(SampleID2 %in% c("H37Rv_1", "H37Rv_2", "H37Rv_3") 
-                             & str_detect(Run, "^Marm_[123]$"), 
-                             paste0(SampleID2, "_Run", str_extract(Run, "[123]")),
+                             & str_detect(Run, "^Marm_[1234]$"), 
+                             paste0(SampleID2, "_Run", str_extract(Run, "[1234]")),
                              SampleID2)) 
 
 # Remove the undetermined
@@ -92,8 +105,19 @@ All_pipeSummary <- All_pipeSummary %>%
   left_join(All_metadata, by = join_by(Run, SampleID2))
 
 # Add column with JM vs LRF samples
+# All_pipeSummary <- All_pipeSummary %>% 
+#   mutate(Handler = if_else(str_detect(SampleID2, "JM"), "JM", "LRF")) %>%
+#   mutate(Handler = if_else(str_detect(SampleID2, "Rv_Log"), "EIL", Handler))
+All_pipeSummary <- All_pipeSummary %>%
+  mutate(Handler = case_when(str_detect(SampleID2, "Rv_Log") ~ "EIL",
+                             str_detect(SampleID2, "JM") ~ "JM",
+                             TRUE ~ "LRF"))
+
+# ####################################################### #
+############# ADD MORE COLUMNS TO PIPE SUMMARY ############
+
 All_pipeSummary <- All_pipeSummary %>% 
-  mutate(Handler = if_else(str_detect(SampleID2, "JM"), "JM", "LRF"))
+  mutate(Type = if_else(str_detect(SampleID2, "Marm"), "Marmoset", "H37Rv"))
 
 
 # ####################################################### #
@@ -117,9 +141,21 @@ Run3_RawReads <- Run3_RawReads %>%
   dplyr::rename_with(function(x) gsub("(_S[0-9]+)$", "_Run3\\1", x), 
                      .cols = matches("^H37Rv_[123]_S[0-9]+$"))
 
+Run4_RawReads <- read.csv("Data/Marm_4_LRF/Mtb.Expression.Gene.Data.readsM.csv")
+Run4_RawReads <- Run4_RawReads %>% 
+  dplyr::select(-Undetermined_S0) %>%
+  dplyr::rename_with(function(x) gsub("(_S[0-9]+)$", "_Run4\\1", x), 
+                     .cols = matches("^H37Rv_[123]_S[0-9]+$"))
+
+# Ella's H37Rv_Log samples
+H37Rv_RawReads <- read.csv("Data/PredictTB_Run6/Mtb.Expression.Gene.Data.readsM.csv") %>% 
+  dplyr::select(X, contains("Rv_Log"))
+
 # Merge the RawReads
 All_RawReads <- merge(Run1_RawReads, Run2_RawReads, all = T)
-All_RawReads <- merge(All_RawReads, Run3_RawReads)
+All_RawReads <- merge(All_RawReads, Run3_RawReads, all = T)
+All_RawReads <- merge(All_RawReads, Run4_RawReads, all = T)
+All_RawReads <- merge(All_RawReads, H37Rv_RawReads, all = T)
 
 
 # Remove the _S at the end
@@ -185,10 +221,10 @@ GoodSamples60_VSTB <- All_VSTB %>%
 # rm(list = ls(pattern = "^tmp"))
 
 # Remove original pipeSummaries
-rm(Marm_1_pipeSummary, Marm_2_pipeSummary, Marm_3_pipeSummary)
+rm(Marm_1_pipeSummary, Marm_2_pipeSummary, Marm_3_pipeSummary, Marm_4_pipeSummary, H37Rv_pipeSummary)
 
 # Remove original raw reads
-rm(Run1_RawReads, Run2_RawReads, Run3_RawReads)
+rm(Run1_RawReads, Run2_RawReads, Run3_RawReads, Run4_RawReads, H37Rv_RawReads)
 
 # Remove VST intermediates
 rm(All_RawReads_f2, All_RawReads_f2_int, keep)

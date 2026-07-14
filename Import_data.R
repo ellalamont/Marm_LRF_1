@@ -199,6 +199,69 @@ All_RawReads_f2_int <- All_RawReads_f2 %>%
 All_VSTB <- varianceStabilizingTransformation(All_RawReads_f2_int, fitType = "parametric")
 All_VSTB <- as.data.frame(All_VSTB)
 
+###########################################################
+############### COMBATSEQ BATCH CORRECTION ################
+# Using CombatSeq
+
+# Keep Genes with at least 10 reads total across all samples (Already run above)
+# keep <- rowSums(All_RawReadsf) >= 10
+# All_RawReadsf2 <- All_RawReadsf[keep,] # Now only 4025 genes
+
+# Generate a matrix of integers
+All_RawReadsf2_int <- All_RawReads_f2 %>%
+  mutate(across(everything(), round)) %>%
+  as.matrix()
+
+count_matrix <- as.matrix(All_RawReadsf2_int)
+# Ensure integer counts
+mode(count_matrix) <- "integer"
+
+# Reorder metadata to match column order in count_matrix
+meta <- All_pipeSummary[match(colnames(count_matrix), All_pipeSummary$SampleID2), ]
+
+# Check alignment
+all(meta$SampleID2 == colnames(count_matrix))  # should be TRUE
+# # IF NOT TRUE RUN THESE:
+# ## This will show the samples in count_matrix that don't match metadata
+# # colnames(count_matrix)[!colnames(count_matrix) %in% All_pipeSummary$SampleID2]
+# ## And the opposite: metadata samples not in count_matrix
+# # All_pipeSummary$SampleID2[!All_pipeSummary$SampleID2 %in% colnames(count_matrix)]
+# 
+# 
+# Extract batch (run) and condition (for checking later)
+batch <- meta$Run
+condition <- meta$Type
+# 
+# Run ComBat-Seq
+combat_counts <- ComBat_seq(
+  count_matrix,
+  batch = batch,
+  group = condition # optional, helps preserve biological signal
+)
+
+
+###########################################################
+################ VSTB FROM BATCH CORRECTED ################
+
+# Normalize without metadata (Blinded)
+All_BC_VSTB <- varianceStabilizingTransformation(combat_counts, fitType = "parametric")
+All_BC_VSTB <- as.data.frame(All_BC_VSTB)
+
+
+###########################################################
+################ MAKE TPM FROM Rv RAW READS ###############
+
+# Bob's TPM includes all the non-coding RNAs, make a new TPM from just the protein-coding genes
+
+source("Function_CalculateTPM.R")
+All_tpmf <- CalculateTPM_RvOnly(All_RawReads_f %>% rownames_to_column("X"))
+
+# Remove the _S at the end
+names(All_tpmf) = gsub(pattern = "_S[0-9]+$", replacement = "", x = names(All_tpmf))
+
+All_tpmf_log2 <- All_tpmf %>% 
+  mutate(across(where(is.numeric), ~ .x + 1)) %>% # Add 1 to all the values
+  mutate(across(where(is.numeric), ~ log2(.x))) # Log transform the values
 
 # ####################################################### #
 ################### FILTER GOODSAMPLES60 ##################

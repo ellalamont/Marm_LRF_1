@@ -35,7 +35,8 @@ CavityScore_colors <- c("H37Rv" = "#999999",
                         "0: fibrotic" = "#FC9272", 
                         "1" = "#F4A6A6",
                         "2" = "#EF6C6C",
-                        "3" = "#C62828",
+                        # "3" = "#C62828",
+                        "3" = "red",
                         "5" = "#8E1B1B")
 
 
@@ -66,7 +67,20 @@ fig1
 #        # dpi = 600,
 #        width = 10, height = 6, units = "in")
 
-
+fig1 <- All_pipeSummary %>% 
+  ggplot(aes(x = N_Genomic, y = Txn_Coverage_f, fill = Cavity_score)) + 
+  geom_point(size = 3.5, alpha = 0.8, stroke = 0.8, shape = 21) +
+  geom_text_repel(aes(label = SampleID2), size = 2) + 
+  scale_fill_manual(values = CavityScore_colors) +  
+  scale_x_continuous(trans='log10') +
+  geom_hline(yintercept = 60, linetype = "dashed", alpha = 0.5) + 
+  geom_vline(xintercept = 700000, linetype = "dashed", alpha = 0.5) + 
+  labs(title = "Marm Runs1-4",
+       subtitle = "All samples",
+       x = paste0("# reads aligning to Mtb"),
+       y = paste0("% transcriptional coverage")) +
+  my_plot_themes
+fig1
 
 
 

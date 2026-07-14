@@ -227,3 +227,22 @@ ggsave(PCA_fig3,
        path = "Figures/PCA",
        # dpi = 600,
        width = 9, height = 6, units = "in")
+
+
+PCA_fig4 <- tmp_PCA_df %>% 
+  ggplot(aes(x = PC1, y = PC2, fill = Cavity_score)) + 
+  geom_point(size = 4.5, alpha = 0.8, stroke = 0.8, shape = 21) +
+  # geom_text_repel(aes(label = Run), size = 2) + 
+  scale_fill_manual(values = CavityScore_colors) +  
+  labs(title = "Marm Runs1-4 VSTB",
+       subtitle = "GoodSamples60_VSTB",
+       x = paste0("PC1: ", tmp_summary_PCA[1,1], "%"),
+       y = paste0("PC2: ", tmp_summary_PCA[2,1], "%")) +
+  my_plot_themes
+PCA_fig4
+ggsave(PCA_fig4,
+       file = paste0("GoodSamples60_VSTB_CavityScore_v1.pdf"),
+       path = "Figures/PCA",
+       # dpi = 600,
+       width = 9, height = 6, units = "in")
+

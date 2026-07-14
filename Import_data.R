@@ -280,6 +280,16 @@ GoodSamples60_VSTB <- All_VSTB %>%
   dplyr::select(all_of(GoodSampleList60))
 
 
+###########################################################
+##################### SUMMARY NUMBERS #####################
+
+All_pipeSummary %>%
+  filter(N_Genomic >= 700000) %>%
+  filter(Txn_Coverage_f >=60) %>%
+  group_by(Type, Cavity_score) %>%
+  summarize(N_samples = n())
+
+
 # ####################################################### #
 ################### CLEAN UP ENVIRONMENT ##################
 

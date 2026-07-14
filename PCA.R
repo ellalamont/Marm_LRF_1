@@ -18,8 +18,10 @@ my_plot_themes <- theme_bw() +
         plot.subtitle = element_text(size=9))
 
 Run_colors <- c(`Marm_1` = "#49006A", 
-                   `Marm_2` = "#AE017E", 
-                   `Marm_3`= "#F768A1")
+                `Marm_2` = "#AE017E", 
+                `Marm_3`= "#F768A1",
+                `Marm_4` = "#FA9FB5",
+                `PredictTB_Run6` = "#FCC5C0")
 
 CavityScore_colors <- c("H37Rv" = "#999999",
                         "Normal" = "#A8D5BA",
@@ -62,6 +64,9 @@ Tissue_colors <- c(
 
 Binary_colors2 <- c("#D55E00", "#0072B2")
 
+Type_colors <- c("Marmoset" = "#AE017E",
+                 "H37Rv" = "#999999")
+
 ###########################################################
 #################### ALL SAMPLES VSTB #####################
 
@@ -77,9 +82,9 @@ tmp_PCA <- prcomp(tmp_data_t, scale = F) # Scale is F here because the data is a
 # See the % Variance explained
 summary(tmp_PCA)
 tmp_summary_PCA <- format(round(as.data.frame(summary(tmp_PCA)[["importance"]]['Proportion of Variance',]) * 100, digits = 1), nsmall = 1) # format and round used to control the digits after the decimal place
-tmp_summary_PCA[1,1] # PC1 explains 13.7% of variance
-tmp_summary_PCA[2,1] # PC2 explains 6.4% of variance
-tmp_summary_PCA[3,1] # PC3 explains 4.7% of variance
+tmp_summary_PCA[1,1] # PC1 explains 13.9% of variance
+tmp_summary_PCA[2,1] # PC2 explains 4.9% of variance
+tmp_summary_PCA[3,1] # PC3 explains 3.3% of variance
 
 # MAKE PCA PLOT with GGPLOT 
 tmp_PCA_df <- as.data.frame(tmp_PCA$x[, 1:3]) # Extract the first 3 PCs
@@ -89,40 +94,37 @@ tmp_PCA_df <- merge(tmp_PCA_df, All_pipeSummary, by = "SampleID2")
 
 PCA_fig1 <- tmp_PCA_df %>% 
   ggplot(aes(x = PC1, y = PC2, fill = Run)) + 
-  geom_point(size = 4, alpha = 0.8, stroke = 0.8, shape = 21) +
-  geom_text_repel(aes(label = SampleID2), size = 2.5) + 
+  geom_point(size = 3.5, alpha = 0.8, stroke = 0.8, shape = 21) +
+  geom_text_repel(aes(label = SampleID2), size = 2) + 
   scale_fill_manual(values = Run_colors) +  
   # scale_shape_manual(values = my_fav_shapes) + 
   # geom_text_repel(aes(label = comma(N_Genomic)), size= 2, box.padding = 0.4, segment.color = "grey42", max.overlaps = Inf) + 
-  labs(title = "Marm Runs1-3 VSTB",
-       subtitle = "All samples, Sample Number labels",
-       x = paste0("PC1: ", summary_PCA[1,1], "%"),
-       y = paste0("PC2: ", summary_PCA[2,1], "%")) +
+  labs(title = "Marm Runs1-4 VSTB",
+       subtitle = "All samples",
+       x = paste0("PC1: ", tmp_summary_PCA[1,1], "%"),
+       y = paste0("PC2: ", tmp_summary_PCA[2,1], "%")) +
   my_plot_themes
 PCA_fig1
 # ggsave(PCA_fig1,
-#        file = paste0("All_VSTB_Tissue.Location_v1.png"),
+#        file = paste0("All_VSTB_v1.pdf"),
 #        path = "Figures/PCA",
-#        dpi = 600,
+#        # dpi = 150,
 #        width = 9, height = 6, units = "in")
 
-PCA_fig2 <- tmp_PCA_df %>% 
-  ggplot(aes(x = PC2, y = PC3, fill = Handler)) + 
-  geom_point(size = 4, alpha = 0.8, stroke = 0.8, shape = 21) +
-  # geom_text_repel(aes(label = Sample_Number), size = 2.5) + 
-  scale_fill_manual(values = Binary_colors2) +  
-  # scale_shape_manual(values = my_fav_shapes) + 
-  # geom_text_repel(aes(label = comma(N_Genomic)), size= 2, box.padding = 0.4, segment.color = "grey42", max.overlaps = Inf) + 
-  labs(title = "Marm Runs1-3 VSTB",
-       subtitle = "All samples, Sample Number labels",
-       x = paste0("PC2: ", summary_PCA[2,1], "%"),
-       y = paste0("PC3: ", summary_PCA[3,1], "%")) +
+PCA_fig2 <- tmp_PCA_df %>%
+  ggplot(aes(x = PC2, y = PC3, fill = Run)) +
+  geom_point(size = 3.5, alpha = 0.8, stroke = 0.8, shape = 21) +
+  scale_fill_manual(values = Run_colors) +
+  labs(title = "Marm Runs1-4 VSTB",
+       subtitle = "All samples",
+       x = paste0("PC2: ", tmp_summary_PCA[2,1], "%"),
+       y = paste0("PC3: ", tmp_summary_PCA[3,1], "%")) +
   my_plot_themes
 PCA_fig2
 # ggsave(PCA_fig2,
-#        file = paste0("All_VSTB_Tissue.Location_v2.png"),
+#        file = paste0("All_VSTB_v2.pdf"),
 #        path = "Figures/PCA",
-#        dpi = 600,
+#        # dpi = 150,
 #        width = 9, height = 6, units = "in")
 
 # Batch effect when seeing PC2 vs PC3?
@@ -152,9 +154,9 @@ tmp_PCA <- prcomp(tmp_data_t, scale = F) # Scale is F here because the data is a
 # See the % Variance explained
 summary(tmp_PCA)
 tmp_summary_PCA <- format(round(as.data.frame(summary(tmp_PCA)[["importance"]]['Proportion of Variance',]) * 100, digits = 1), nsmall = 1) # format and round used to control the digits after the decimal place
-tmp_summary_PCA[1,1] # PC1 explains 18.9% of variance
-tmp_summary_PCA[2,1] # PC2 explains 6.3% of variance
-tmp_summary_PCA[3,1] # PC3 explains 3.9% of variance
+tmp_summary_PCA[1,1] # PC1 explains 18.1% of variance
+tmp_summary_PCA[2,1] # PC2 explains 5.1% of variance
+tmp_summary_PCA[3,1] # PC3 explains 3.3% of variance
 
 # MAKE PCA PLOT with GGPLOT 
 tmp_PCA_df <- as.data.frame(tmp_PCA$x[, 1:3]) # Extract the first 3 PCs
@@ -164,40 +166,38 @@ tmp_PCA_df <- merge(tmp_PCA_df, GoodSamples60_pipeSummary, by = "SampleID2")
 
 PCA_fig1 <- tmp_PCA_df %>% 
   ggplot(aes(x = PC1, y = PC2, fill = Run)) + 
-  geom_point(size = 4, alpha = 0.8, stroke = 0.8, shape = 21) +
-  geom_text_repel(aes(label = Sample_Number), size = 2.5) + 
+  geom_point(size = 3.5, alpha = 0.8, stroke = 0.8, shape = 21) +
+  geom_text_repel(aes(label = SampleID2), size = 2) + 
   scale_fill_manual(values = Run_colors) +  
   # scale_shape_manual(values = my_fav_shapes) + 
   # geom_text_repel(aes(label = comma(N_Genomic)), size= 2, box.padding = 0.4, segment.color = "grey42", max.overlaps = Inf) + 
-  labs(title = "Marm Runs1-3 VSTB",
-       subtitle = "GoodSamples60_VSTB, Sample Number labels",
-       x = paste0("PC1: ", summary_PCA[1,1], "%"),
-       y = paste0("PC2: ", summary_PCA[2,1], "%")) +
+  labs(title = "Marm Runs1-4 VSTB",
+       subtitle = "GoodSamples60_VSTB",
+       x = paste0("PC1: ", tmp_summary_PCA[1,1], "%"),
+       y = paste0("PC2: ", tmp_summary_PCA[2,1], "%")) +
   my_plot_themes
 PCA_fig1
 ggsave(PCA_fig1,
-       file = paste0("GoodSamples60_VSTB_Run_v1.png"),
+       file = paste0("GoodSamples60_VSTB_Run_v1.pdf"),
        path = "Figures/PCA",
-       dpi = 600,
+       # dpi = 600,
        width = 9, height = 6, units = "in")
 
 PCA_fig2 <- tmp_PCA_df %>% 
   ggplot(aes(x = PC2, y = PC3, fill = Run)) + 
-  geom_point(size = 4, alpha = 0.8, stroke = 0.8, shape = 21) +
-  geom_text_repel(aes(label = Sample_Number), size = 2.5) + 
+  geom_point(size = 3.5, alpha = 0.8, stroke = 0.8, shape = 21) +
+  geom_text_repel(aes(label = SampleID2), size = 2) + 
   scale_fill_manual(values = Run_colors) +  
-  # scale_shape_manual(values = my_fav_shapes) + 
-  # geom_text_repel(aes(label = comma(N_Genomic)), size= 2, box.padding = 0.4, segment.color = "grey42", max.overlaps = Inf) + 
-  labs(title = "Marm Runs1-3 VSTB",
-       subtitle = "All samples, Sample Number labels",
-       x = paste0("PC2: ", summary_PCA[2,1], "%"),
-       y = paste0("PC3: ", summary_PCA[3,1], "%")) +
+  labs(title = "Marm Runs1-4 VSTB",
+       subtitle = "GoodSamples60_VSTB",
+       x = paste0("PC2: ", tmp_summary_PCA[2,1], "%"),
+       y = paste0("PC3: ", tmp_summary_PCA[3,1], "%")) +
   my_plot_themes
 PCA_fig2
 ggsave(PCA_fig2,
-       file = paste0("GoodSamples60_VSTB_Run_v2.png"),
+       file = paste0("GoodSamples60_VSTB_Run_v2.pdf"),
        path = "Figures/PCA",
-       dpi = 600,
+       # dpi = 600,
        width = 9, height = 6, units = "in")
 
 # Batch effect when seeing PC2 vs PC3?
@@ -211,3 +211,19 @@ PCA_3D <- plot_ly(my_PCA_df, x = ~PC1, y = ~PC2, z = ~PC3,
                   colors = my_run_colors)
 PCA_3D
 
+PCA_fig3 <- tmp_PCA_df %>% 
+  ggplot(aes(x = PC1, y = PC2, fill = Type)) + 
+  geom_point(size = 3.5, alpha = 0.8, stroke = 0.8, shape = 21) +
+  # geom_text_repel(aes(label = Run), size = 2) + 
+  scale_fill_manual(values = Type_colors) +  
+  labs(title = "Marm Runs1-4 VSTB",
+       subtitle = "GoodSamples60_VSTB",
+       x = paste0("PC1: ", tmp_summary_PCA[1,1], "%"),
+       y = paste0("PC2: ", tmp_summary_PCA[2,1], "%")) +
+  my_plot_themes
+PCA_fig3
+ggsave(PCA_fig3,
+       file = paste0("GoodSamples60_VSTB_Type_v1.pdf"),
+       path = "Figures/PCA",
+       # dpi = 600,
+       width = 9, height = 6, units = "in")

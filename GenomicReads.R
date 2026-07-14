@@ -60,11 +60,11 @@ fig1 <- All_pipeSummary %>%
        y = paste0("% transcriptional coverage")) +
   my_plot_themes
 fig1
-ggsave(fig1,
-       file = paste0("AllSamples_v1.pdf"),
-       path = "Figures/GenomicReads",
-       # dpi = 600,
-       width = 10, height = 6, units = "in")
+# ggsave(fig1,
+#        file = paste0("AllSamples_v1.pdf"),
+#        path = "Figures/GenomicReads",
+#        # dpi = 600,
+#        width = 10, height = 6, units = "in")
 
 
 

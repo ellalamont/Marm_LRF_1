@@ -95,6 +95,14 @@ All_pipeSummary <- All_pipeSummary %>%
 All_pipeSummary <- All_pipeSummary %>%
   filter(SampleID != "Undetermined_S0")
 
+# Add the Binary outcome and rows for extra samples
+Binary_Outcome <- read.csv("Data/feature_selection_meta.csv") %>%
+  mutate(SampleID2 = base::sub("_[^_]*$", "", SampleID2))
+All_pipeSummary <- All_pipeSummary %>%
+  full_join(Binary_Outcome %>% select(SampleID2, Outcome2),
+            by = "SampleID2")
+
+
 # ####################################################### #
 ################## IMPORT SAMPLE METADATA #################
 
@@ -111,6 +119,7 @@ All_pipeSummary <- All_pipeSummary %>%
 All_pipeSummary <- All_pipeSummary %>%
   mutate(Handler = case_when(str_detect(SampleID2, "Rv_Log") ~ "EIL",
                              str_detect(SampleID2, "JM") ~ "JM",
+                             str_detect(SampleID2, "B") ~ "JM",
                              TRUE ~ "LRF"))
 
 # ####################################################### #
@@ -152,6 +161,11 @@ Run4_RawReads <- Run4_RawReads %>%
   dplyr::rename_with(function(x) gsub("(_S[0-9]+)$", "_Run4\\1", x), 
                      .cols = matches("^H37Rv_[123]_S[0-9]+$"))
 
+JM_RawReads <- read.csv("Data/counts_matrix_JM.csv")
+JM_RawReads <- JM_RawReads %>% 
+  dplyr::rename_with(function(x) gsub("(_S[0-9]+)$", "_Run4\\1", x), 
+                     .cols = matches("^H37Rv_[123]_S[0-9]+$"))
+
 # Ella's H37Rv_Log samples
 H37Rv_RawReads <- read.csv("Data/PredictTB_Run6/Mtb.Expression.Gene.Data.readsM.csv") %>% 
   dplyr::select(X, contains("Rv_Log"))
@@ -160,6 +174,7 @@ H37Rv_RawReads <- read.csv("Data/PredictTB_Run6/Mtb.Expression.Gene.Data.readsM.
 All_RawReads <- merge(Run1_RawReads, Run2_RawReads, all = T)
 All_RawReads <- merge(All_RawReads, Run3_RawReads, all = T)
 All_RawReads <- merge(All_RawReads, Run4_RawReads, all = T)
+All_RawReads <- merge(All_RawReads, JM_RawReads, all = T)
 All_RawReads <- merge(All_RawReads, H37Rv_RawReads, all = T)
 
 
@@ -167,40 +182,40 @@ All_RawReads <- merge(All_RawReads, H37Rv_RawReads, all = T)
 names(All_RawReads) = gsub(pattern = "_S[0-9]+$", replacement = "", x = names(All_RawReads))
 
 # Keep only the protein coding Rv genes
-All_RawReads_f <- All_RawReads %>%
+All_RawReadsf <- All_RawReads %>%
   filter(grepl("^Rv[0-9]+[A-Za-z]?$", X))
 
-All_RawReads_f <- All_RawReads_f %>%
+All_RawReadsf <- All_RawReadsf %>%
   column_to_rownames("X")
 
 # ####################################################### #
 ######## CALCULATE TXN COVERAGE FROM Rv GENES ONLY ########
 
 # Count, for each column (sample), how many genes have >= 10 reads
-NumGoodReads <- colSums(All_RawReads_f >= 10)
+NumGoodReads <- colSums(All_RawReadsf >= 10)
 
 # Add as new column in All_pipeSummary, matching by SampleID2
-All_pipeSummary$AtLeast.10.Reads_f <- NumGoodReads[All_pipeSummary$SampleID2]
+All_pipeSummary$AtLeast.10.Readsf <- NumGoodReads[All_pipeSummary$SampleID2]
 
 # Add transcriptional coverage
-All_pipeSummary <- All_pipeSummary %>% mutate(Txn_Coverage_f = round(AtLeast.10.Reads_f/4030*100))
+All_pipeSummary <- All_pipeSummary %>% mutate(Txn_Coveragef = round(AtLeast.10.Readsf/4030*100))
 
 # ####################################################### #
 #################### VSTB NORMALIZATION ###################
 # Blinded VST (VSTB) for PCA. 
 
-# Keep Genes with at least 10 reads total across all samples
-keep <- rowSums(All_RawReads_f) >= 10
-All_RawReads_f2 <- All_RawReads_f[keep,] # Now only 4025 genes
-
-# Generate a matrix of integers
-All_RawReads_f2_int <- All_RawReads_f2 %>%
-  mutate(across(everything(), round)) %>% 
-  as.matrix()
-
-# Normalize without metadata (Blinded)
-All_VSTB <- varianceStabilizingTransformation(All_RawReads_f2_int, fitType = "parametric")
-All_VSTB <- as.data.frame(All_VSTB)
+# # Keep Genes with at least 10 reads total across all samples
+# keep <- rowSums(All_RawReads_f) >= 10
+# All_RawReads_f2 <- All_RawReads_f[keep,] # Now only 4025 genes
+# 
+# # Generate a matrix of integers
+# All_RawReads_f2_int <- All_RawReads_f2 %>%
+#   mutate(across(everything(), round)) %>% 
+#   as.matrix()
+# 
+# # Normalize without metadata (Blinded)
+# All_VSTB <- varianceStabilizingTransformation(All_RawReads_f2_int, fitType = "parametric")
+# All_VSTB <- as.data.frame(All_VSTB)
 
 ###########################################################
 ############### COMBATSEQ BATCH CORRECTION ################
@@ -210,45 +225,45 @@ All_VSTB <- as.data.frame(All_VSTB)
 # keep <- rowSums(All_RawReadsf) >= 10
 # All_RawReadsf2 <- All_RawReadsf[keep,] # Now only 4025 genes
 
-# Generate a matrix of integers
-All_RawReadsf2_int <- All_RawReads_f2 %>%
-  mutate(across(everything(), round)) %>%
-  as.matrix()
-
-count_matrix <- as.matrix(All_RawReadsf2_int)
-# Ensure integer counts
-mode(count_matrix) <- "integer"
-
-# Reorder metadata to match column order in count_matrix
-meta <- All_pipeSummary[match(colnames(count_matrix), All_pipeSummary$SampleID2), ]
-
-# Check alignment
-all(meta$SampleID2 == colnames(count_matrix))  # should be TRUE
-# # IF NOT TRUE RUN THESE:
-# ## This will show the samples in count_matrix that don't match metadata
-# # colnames(count_matrix)[!colnames(count_matrix) %in% All_pipeSummary$SampleID2]
-# ## And the opposite: metadata samples not in count_matrix
-# # All_pipeSummary$SampleID2[!All_pipeSummary$SampleID2 %in% colnames(count_matrix)]
+# # Generate a matrix of integers
+# All_RawReadsf2_int <- All_RawReads_f2 %>%
+#   mutate(across(everything(), round)) %>%
+#   as.matrix()
 # 
+# count_matrix <- as.matrix(All_RawReadsf2_int)
+# # Ensure integer counts
+# mode(count_matrix) <- "integer"
 # 
-# Extract batch (run) and condition (for checking later)
-batch <- meta$Run
-condition <- meta$Type
+# # Reorder metadata to match column order in count_matrix
+# meta <- All_pipeSummary[match(colnames(count_matrix), All_pipeSummary$SampleID2), ]
 # 
-# Run ComBat-Seq
-combat_counts <- ComBat_seq(
-  count_matrix,
-  batch = batch,
-  group = condition # optional, helps preserve biological signal
-)
+# # Check alignment
+# all(meta$SampleID2 == colnames(count_matrix))  # should be TRUE
+# # # IF NOT TRUE RUN THESE:
+# # ## This will show the samples in count_matrix that don't match metadata
+# # # colnames(count_matrix)[!colnames(count_matrix) %in% All_pipeSummary$SampleID2]
+# # ## And the opposite: metadata samples not in count_matrix
+# # # All_pipeSummary$SampleID2[!All_pipeSummary$SampleID2 %in% colnames(count_matrix)]
+# # 
+# # 
+# # Extract batch (run) and condition (for checking later)
+# batch <- meta$Run
+# condition <- meta$Type
+# # 
+# # Run ComBat-Seq
+# combat_counts <- ComBat_seq(
+#   count_matrix,
+#   batch = batch,
+#   group = condition # optional, helps preserve biological signal
+# )
 
 
 ###########################################################
 ################ VSTB FROM BATCH CORRECTED ################
 
-# Normalize without metadata (Blinded)
-All_BC_VSTB <- varianceStabilizingTransformation(combat_counts, fitType = "parametric")
-All_BC_VSTB <- as.data.frame(All_BC_VSTB)
+# # Normalize without metadata (Blinded)
+# All_BC_VSTB <- varianceStabilizingTransformation(combat_counts, fitType = "parametric")
+# All_BC_VSTB <- as.data.frame(All_BC_VSTB)
 
 
 ###########################################################
@@ -257,7 +272,7 @@ All_BC_VSTB <- as.data.frame(All_BC_VSTB)
 # Bob's TPM includes all the non-coding RNAs, make a new TPM from just the protein-coding genes
 
 source("Function_CalculateTPM.R")
-All_tpmf <- CalculateTPM_RvOnly(All_RawReads_f %>% rownames_to_column("X"))
+All_tpmf <- CalculateTPM_RvOnly(All_RawReadsf %>% rownames_to_column("X"))
 
 # Remove the _S at the end
 names(All_tpmf) = gsub(pattern = "_S[0-9]+$", replacement = "", x = names(All_tpmf))
@@ -267,27 +282,32 @@ All_tpmf_log2 <- All_tpmf %>%
   mutate(across(where(is.numeric), ~ log2(.x))) # Log transform the values
 
 # ####################################################### #
+#################### REMOVE DUPLICATES ####################
+# Removing duplicates that would make it above the threshold (leaving in the lower ones because they are filtered out later)
+
+my_pipeSummary <- All_pipeSummary %>%
+  filter(!SampleID2 %in% c("Marm_LRF_2_re", "Marm_LRF_25_re", "Marm_LRF_42", "Marm_LRF_56_re"))
+
+
+# ####################################################### #
 ################### FILTER GOODSAMPLES60 ##################
 
-GoodSamples60_pipeSummary <- All_pipeSummary %>%
-  filter(Txn_Coverage_f >= 60) %>%
+GoodSamples60_pipeSummary <- my_pipeSummary %>%
+  filter(Txn_Coveragef >= 60) %>%
   filter(N_Genomic >= 700000)
 
 GoodSampleList60 <- GoodSamples60_pipeSummary %>%  
   pull(SampleID2) # 71 samples
 
-GoodSamples60_RawReadsf <- All_RawReads_f %>% 
+GoodSamples60_RawReadsf <- All_RawReadsf %>% 
   dplyr::select(all_of(GoodSampleList60))
 
-GoodSamples60_VSTB <- All_VSTB %>% 
+GoodSamples60_log2tpmf <- All_RawReadsf %>% 
   dplyr::select(all_of(GoodSampleList60))
 
-# ####################################################### #
-#################### REMOVE DUPLICATES ####################
-# Removing duplicates that would make it above the threshold (leaving in the lower ones because they are filtered out later)
+# GoodSamples60_VSTB <- All_VSTB %>% 
+#   dplyr::select(all_of(GoodSampleList60))
 
-GoodSamples60_pipeSummary <- GoodSamples60_pipeSummary %>%
-  filter(!SampleID2 %in% c("Marm_LRF_2_re", "Marm_LRF_25_re", "Marm_LRF_42", "Marm_LRF_56_re"))
 
 
 ###########################################################
@@ -304,7 +324,6 @@ All_pipeSummary %>%
   # filter(Txn_Coverage_f < 60) %>%
   group_by(Type, Cavity_score) %>%
   summarize(N_samples = n())
-
 
 # ####################################################### #
 ################### CLEAN UP ENVIRONMENT ##################

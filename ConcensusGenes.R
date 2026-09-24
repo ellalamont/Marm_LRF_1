@@ -340,6 +340,7 @@ log2tpm_SwitchBox_Results <- SWAP.GetKTSP.Result(
   classifier = log2tpm_SwitchBox_FinalTrain,
   predictions=TRUE, decision_values=TRUE)
 log2tpm_SwitchBox_Results$roc
+# Area under the curve: 0.9965
 
 ###########################################################
 #################### COLLECT FINAL GENES ##################
@@ -347,6 +348,7 @@ log2tpm_SwitchBox_Results$roc
 # Get the genes that show up in all the models
 log2tpm_ConsensusGenes <- Reduce(intersect, list(log2tpm_LR_Genes, log2tpm_LR.Boot_Genes, log2tpm_GeneSelect_Genes, log2tpm_SwitchBox_Genes))
 log2tpm_ConsensusGenes
+# character(0)
 
 # Get the genes that show up in 3/4 models
 log2tpm_geneLists <- list(log2tpm_LR = log2tpm_LR_Genes, log2tpm_LR.Boot = log2tpm_LR.Boot_Genes, log2tpm_GeneSelect = log2tpm_GeneSelect_Genes, log2tpm_SwitchBox = log2tpm_SwitchBox_Genes)
@@ -362,40 +364,23 @@ log2tpm_allGenes2 <- unlist(log2tpm_geneLists2)
 log2tpm_geneCounts2 <- table(log2tpm_allGenes2)
 ConsensusGenes_2plus <- names(log2tpm_geneCounts2[log2tpm_geneCounts2 >= 2])
 ConsensusGenes_2plus
-# "Rv0161"  "Rv0238"  "Rv1138c" "Rv1267c" "Rv1934c" "Rv1952"  "Rv2075c" "Rv2092c" "Rv2415c" "Rv3747" 
-
-# Adding Rv0269c becuase that goes up in case and Rv0089 because I like it
-ConsensusGenes2 <- c(ConsensusGenes, "Rv0269c", "Rv0089", "Rv1955", "Rv2385")
+# [1] "Rv1062" "Rv1440"
 
 # How correlated are my genes?
-cor(model_df2[,c("Rv2385", "Rv2075c", "Rv3747", "Rv0161", "Rv1138c")], use="complete.obs")
-# Rv2385    Rv2075c     Rv3747     Rv0161    Rv1138c
-# Rv2385   1.0000000  0.6334566  0.5814414  0.5550559 -0.2861174
-# Rv2075c  0.6334566  1.0000000  0.5738714  0.3719474 -0.4217958
-# Rv3747   0.5814414  0.5738714  1.0000000  0.3790249 -0.1770300
-# Rv0161   0.5550559  0.3719474  0.3790249  1.0000000 -0.4965064
-# Rv1138c -0.2861174 -0.4217958 -0.1770300 -0.4965064  1.0000000
+cor(model_df[,c("Rv1062", "Rv1440")], use="complete.obs")
+# Rv1062    Rv1440
+# Rv1062 1.0000000 0.5948229
+# Rv1440 0.5948229 1.0000000
 
 ###########################################################
 ################# ORGANIZE DATA w/METADATA ################
 
 model_df2 <- GoodSamples60_pipeSummary %>% 
-  filter(Type == "Week 2 sputum") %>%
-  dplyr::select(SampleID2, Outcome, TTD, XpertCT_wk0, BMI, Age, Arm, main_lineage) %>% # Keep current metrics/biomarkers
-  mutate(XpertCT_wk0 = as.numeric(XpertCT_wk0)) %>%
+  dplyr::select(SampleID2, Outcome2) %>% # Keep current metrics/biomarkers
   mutate(Outcome = factor(Outcome, levels = c("case", "control"))) %>%
   inner_join(tmp_log2tpm, by = "SampleID2") %>%
   column_to_rownames("SampleID2") %>%
   na.omit()
-
-# Collapsing arm to make binary, A have worse cavitation than B or C
-model_df2 <- model_df2 %>%
-  mutate(Arm2 = ifelse(Arm == "A", "A", "BorC")) %>%
-  mutate(Arm3 = ifelse(Arm == "C", "C", "AorB"))
-
-# Collapsing lineage to make binary, There is only 1 lineage3, combining with lineage2 
-model_df2 <- model_df2 %>%
-  mutate(Lineage2 = ifelse(main_lineage == "lineage4", "lineage4", "lineage2or3"))
 
 model_df2 <- model_df2 %>% dplyr::select(Outcome, TTD, XpertCT_wk0, BMI, Age, Arm2, Arm3, main_lineage,  all_of(ConsensusGenes2), )
 
@@ -407,51 +392,7 @@ model_df2 <- model_df2 %>%
   mutate(Outcome2 = ifelse(Outcome == "control", 0, 1))
 
 
-###########################################################
-#################### CHECK FOR LINEARITY ##################
-# 8/6/26: Read Tim Sterling's paper and he was talking about checking continuous variables for linearity so here I am
-# *!*!*!* Need to think about this some more !*!*!*!*
-library(rms)
 
-# Chunk test from rms package?
-dd <- datadist(model_df2)
-options(datadist = "dd")
-
-fit <- lrm(
-  Outcome2 ~ rcs(Age, 3) + rcs(BMI, 3) +
-    rcs(TTD, 3) + rcs(XpertCT_wk0, 3), # + 
-  # rcs(Rv3747, 3) + rcs(Rv0161, 3) + rcs(Rv2075c, 3),
-  data = model_df2
-)
-
-anova(fit)
-# Wald Statistics          Response: Outcome2 
-# 
-# Factor          Chi-Square d.f. P     
-# Age             0.08       2    0.9586
-#   Nonlinear     0.02       1    0.8852
-# BMI             3.30       2    0.1919
-#   Nonlinear     2.00       1    0.1574
-# TTD             4.12       2    0.1277
-#   Nonlinear     4.12       1    0.0425
-# XpertCT_wk0     2.29       2    0.3188
-#   Nonlinear     0.39       1    0.5330
-# TOTAL NONLINEAR 4.35       4    0.3605
-# TOTAL           6.02       8    0.6452
-
-plot(Predict(fit, TTD))
-plot(Predict(fit, Age))
-
-
-# "Linearity of continuous predictors was assessed using restricted cubic splines with three knots and Wald chunk tests. No evidence of overall nonlinearity was observed (overall nonlinear Wald test, P = 0.36). Although TTD showed evidence of a nonlinear association (P = 0.043), spline terms were not retained because of the limited sample size and absence of overall improvement in model fit."
-
-ggplot(model_df2, aes(TTD, Outcome2)) +
-  geom_jitter(height = 0.05) +
-  geom_smooth(
-    method = "glm",
-    method.args = list(family = binomial),
-    formula = y ~ splines::ns(x, df = 3)
-  )
 
 
 

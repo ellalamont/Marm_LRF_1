@@ -315,12 +315,12 @@ GoodSamples60_log2tpmf <- All_RawReadsf %>%
 
 GoodSamples60_pipeSummary %>%
   filter(N_Genomic >= 700000) %>%
-  filter(Txn_Coverage_f >=60) %>%
+  filter(Txn_Coveragef >=60) %>%
   group_by(Type, Cavity_score) %>%
   summarize(N_samples = n())
 
 All_pipeSummary %>%
-  filter(N_Genomic < 700000 | Txn_Coverage_f <60) %>%
+  filter(N_Genomic < 700000 | Txn_Coveragef <60) %>%
   # filter(Txn_Coverage_f < 60) %>%
   group_by(Type, Cavity_score) %>%
   summarize(N_samples = n())

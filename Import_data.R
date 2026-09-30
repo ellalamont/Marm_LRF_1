@@ -16,7 +16,7 @@ library(DESeq2)
 # library(rstatix) # for adjust_pvalue
 # library(ggpmisc) # https://stackoverflow.com/questions/7549694/add-regression-line-equation-and-r2-on-graph
 library(ggrepel)
-# library(pheatmap)
+library(pheatmap)
 # library(dendextend) # May need this for looking at pheatmap clustering
 # library(ggplotify) # To convert pheatmaps to ggplots
 # library(corrplot)
